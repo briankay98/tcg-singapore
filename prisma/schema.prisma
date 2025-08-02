@@ -1,0 +1,145 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  emailVerified     DateTime?
+  name              String?
+  image             String?
+  passwordHash      String?
+  facebookId        String?   @unique
+  isVerified        Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // User profile
+  bio               String?
+  location          String?
+  phone             String?
+
+  // Relationships
+  listings          Listing[]
+  bids              Bid[]
+  watchList         WatchList[]
+  messages          Message[]
+  
+  @@map("users")
+}
+
+model Listing {
+  id               String      @id @default(cuid())
+  title            String
+  description      String
+  game             String      // Pokemon, Magic, Yu-Gi-Oh, etc.
+  cardName         String
+  condition        Condition
+  rarity           String
+  listingType      ListingType
+  startingPrice    Decimal     @db.Decimal(10, 2)
+  buyNowPrice      Decimal?    @db.Decimal(10, 2)
+  reservePrice     Decimal?    @db.Decimal(10, 2)
+  currentPrice     Decimal     @db.Decimal(10, 2)
+  endTime          DateTime?
+  isActive         Boolean     @default(true)
+  isDeleted        Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  // Seller info
+  sellerId         String
+  seller           User        @relation(fields: [sellerId], references: [id])
+
+  // Shipping
+  shippingCost     Decimal?    @db.Decimal(10, 2)
+  allowLocalPickup Boolean     @default(false)
+  location         String?
+
+  // Relationships
+  images           ListingImage[]
+  bids             Bid[]
+  watchList        WatchList[]
+  messages         Message[]
+
+  @@map("listings")
+}
+
+model ListingImage {
+  id        String  @id @default(cuid())
+  url       String
+  thumbnail String?
+  isPrimary Boolean @default(false)
+  order     Int     @default(0)
+
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("listing_images")
+}
+
+model Bid {
+  id        String   @id @default(cuid())
+  amount    Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+
+  bidderId  String
+  bidder    User     @relation(fields: [bidderId], references: [id])
+
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id])
+
+  @@map("bids")
+}
+
+model WatchList {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id])
+
+  @@unique([userId, listingId])
+  @@map("watch_list")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id])
+
+  @@map("messages")
+}
+
+enum Condition {
+  MINT
+  NEAR_MINT
+  GOOD
+  FAIR
+  POOR
+}
+
+enum ListingType {
+  AUCTION
+  BUY_NOW
+  AUCTION_WITH_BUY_NOW
+}
